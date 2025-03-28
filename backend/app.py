@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash
 import datetime
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["http://localhost:8080", "http://localhost:8081"]}})
 
 # Config
 app.config['JWT_SECRET_KEY'] = 'super-secret-key'  # Replace with a strong secret key!
