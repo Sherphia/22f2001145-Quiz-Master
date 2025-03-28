@@ -1,6 +1,6 @@
 from flask import Flask, json, jsonify, request
 from flask_cors import CORS
-from models.models import Question, Quiz, db, User
+from models.models import Question, Quiz, Result, db, User
 from routes.auth_routes import auth_bp
 from flask_jwt_extended import JWTManager,get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash
@@ -280,6 +280,91 @@ def get_quizzes():
 
     except Exception as e:
         print("Error in get_quizzes:", e)
+        return jsonify({"message": "Server error"}), 500
+
+@app.route('/api/submit-quiz', methods=['POST'])
+@jwt_required()
+def submit_quiz():
+    try:
+        identity = json.loads(get_jwt_identity())
+        user = User.query.filter_by(id=identity["id"], role="user").first()
+        if not user:
+            return jsonify({"message": "Users only!"}), 403
+
+        data = request.get_json()
+        quiz_id = data.get("quiz_id")
+        answers = data.get("answers")  # [{ question_id: ..., selected_answer: ... }]
+
+        if not quiz_id or not answers:
+            return jsonify({"message": "Quiz ID and answers are required"}), 400
+
+        score = 0
+
+        for ans in answers:
+            question = Question.query.filter_by(id=ans['question_id']).first()
+            if not question:
+                continue
+
+            correct = json.loads(question.correct_answer) if isinstance(question.correct_answer, str) else question.correct_answer
+            selected = ans['selected_answer']
+
+            if question.question_type == 'msq':
+                # Compare sorted lists for MSQ
+                if sorted(map(str, correct)) == sorted(map(str, selected)):
+                    score += 1
+            else:
+                # MCQ, numeric, text (simple match)
+                if str(correct).strip().lower() == str(selected).strip().lower():
+                    score += 1
+
+        result = Result(user_id=user.id, quiz_id=quiz_id, score=score)
+        db.session.add(result)
+        db.session.commit()
+
+        return jsonify({"message": "Quiz submitted successfully!", "score": score}), 200
+
+    except Exception as e:
+        print("Error in submit_quiz:", e)
+        return jsonify({"message": "Server error"}), 500
+
+@app.route('/api/quizzes/<int:quiz_id>', methods=['GET'])
+@jwt_required()
+def get_quiz_by_id(quiz_id):
+    try:
+        identity = json.loads(get_jwt_identity())
+
+        # Both user and admin can access
+        user = User.query.filter_by(id=identity["id"]).first()
+        if not user:
+            return jsonify({"message": "Unauthorized"}), 403
+
+        quiz = Quiz.query.get(quiz_id)
+        if not quiz:
+            return jsonify({"message": "Quiz not found"}), 404
+
+        # Include associated questions
+        questions = Question.query.filter_by(quiz_id=quiz_id).all()
+        question_list = []
+        for q in questions:
+            question_list.append({
+                "id": q.id,
+                "question_text": q.question_text,
+                "question_type": q.question_type,
+                "options": json.loads(q.options) if q.options else [],
+            })
+
+        return jsonify({
+            "quiz": {
+                "id": quiz.id,
+                "title": quiz.title,
+                "description": quiz.description,
+                "total_marks": quiz.total_marks,
+                "questions": question_list
+            }
+        }), 200
+
+    except Exception as e:
+        print("Error in get_quiz_by_id:", e)
         return jsonify({"message": "Server error"}), 500
 
 if __name__ == '__main__':
