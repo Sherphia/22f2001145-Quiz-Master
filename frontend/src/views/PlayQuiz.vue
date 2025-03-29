@@ -259,10 +259,8 @@ export default {
     },
     checkAnswer() {
       const currentQ = this.questions[this.currentQuestion];
-
       let userAnswer = this.answers[this.currentQuestion];
 
-      // Ensure user has selected or entered an answer
       if (this.isAnswerEmpty(userAnswer)) {
         this.error = "Please select or enter an answer.";
         return;
@@ -272,7 +270,7 @@ export default {
       const qType = currentQ.question_type.toLowerCase();
       let correctAns = currentQ.correct_answer;
 
-      // Normalize correct answer if it's a stringified array (for MSQ)
+      // Handle MSQ: Parse stringified array
       if (typeof correctAns === "string" && correctAns.startsWith("[")) {
         try {
           correctAns = JSON.parse(correctAns);
@@ -283,13 +281,34 @@ export default {
       }
 
       try {
-        if (["mcq", "text", "numeric"].includes(qType)) {
-          // Protect against undefined/null values
-          const userVal = (userAnswer ?? "").toString().trim().toLowerCase();
-          const correctVal = (correctAns ?? "").toString().trim().toLowerCase();
-          correct = userVal === correctVal;
+        if (qType === "mcq") {
+          // Convert index to actual option text before comparison
+          if (typeof correctAns === "number" && Array.isArray(currentQ.options))
+            correctAns = currentQ.options[correctAns];
+          correct =
+            userAnswer.toString().trim().toLowerCase() ===
+            correctAns.toString().trim().toLowerCase();
+        } else if (qType === "numeric") {
+          correctAns = JSON.parse(currentQ.correct_answer);
+          const cleanedCorrect = parseFloat(
+            currentQ.correct_answer.replace(/"/g, "")
+          );
+          const cleanedUser = parseFloat(
+            userAnswer.toString().replace(/"/g, "")
+          );
+          console.log(userAnswer, correctAns);
+          correct = cleanedCorrect === cleanedUser;
+          console.log("Is Correct:", correct);
+
+          /*correctAns = parseFloat(currentQ.options[currentQ.correctAnswer]);
+          correct = parseFloat(userAnswer) === parseFloat(correctAns); // Convert both to numbers
+          console.log("MY numeric crct:", correctAns);*/
+        } else if (qType === "text") {
+          correct =
+            userAnswer.toString().trim().toLowerCase() ===
+            correctAns.toString().trim().toLowerCase();
         } else if (qType === "msq") {
-          if (!Array.isArray(userAnswer)) userAnswer = [userAnswer]; // Ensure array
+          if (!Array.isArray(userAnswer)) userAnswer = [userAnswer];
           if (!Array.isArray(correctAns)) correctAns = [];
 
           const normalizedCorrect = correctAns
