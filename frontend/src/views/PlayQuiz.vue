@@ -214,9 +214,17 @@ export default {
       try {
         const token = localStorage.getItem("token");
         const response = await axios.post(
-          `http://localhost:5000/api/quizzes/${this.quiz.id}/submit`,
-          { answers: this.answers },
-          { headers: { Authorization: `Bearer ${token}` } }
+          "http://localhost:5000/api/submit-quiz",
+          {
+            quiz_id: this.quiz.id,
+            answers: this.questions.map((q, index) => ({
+              question_id: q.id,
+              selected_answer: this.answers[index],
+            })),
+          },
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
         );
         console.log("🔑 Token being sent:", token);
         // After submitting, navigate to results page or show result

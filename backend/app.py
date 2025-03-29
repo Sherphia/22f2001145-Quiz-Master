@@ -7,7 +7,7 @@ from werkzeug.security import generate_password_hash
 import datetime
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": ["http://localhost:8080", "http://localhost:8081"]}})
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 
 # Config
 app.config['JWT_SECRET_KEY'] = 'super-secret-key'  # Replace with a strong secret key!
@@ -366,6 +366,7 @@ def get_quiz_by_id(quiz_id):
     except Exception as e:
         print("Error in get_quiz_by_id:", e)
         return jsonify({"message": "Server error"}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True)
