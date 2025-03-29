@@ -87,13 +87,6 @@
 
       <!-- Navigation buttons -->
       <div class="navigation-buttons mt-4 d-flex justify-content-between">
-        <button
-          class="btn btn-secondary"
-          @click="previousQuestion"
-          :disabled="currentQuestion === 0"
-        >
-          Previous
-        </button>
         <div>
           <button
             class="btn btn-success"
@@ -213,16 +206,6 @@ export default {
         currentAnswer.push(option); // Select
       }
     },
-    previousQuestion() {
-      if (this.currentQuestion > 0) {
-        this.currentQuestion--;
-      }
-    },
-    nextQuestion() {
-      if (this.currentQuestion < this.questions.length - 1) {
-        this.currentQuestion++;
-      }
-    },
     isAnswerEmpty(answer) {
       if (Array.isArray(answer)) return answer.length === 0;
       return !answer && answer !== 0; // handles "", null, undefined but not 0
@@ -282,28 +265,29 @@ export default {
 
       try {
         if (qType === "mcq") {
-          // Convert index to actual option text before comparison
-          if (typeof correctAns === "number" && Array.isArray(currentQ.options))
-            correctAns = currentQ.options[correctAns];
+          let correctAnsIndex = parseInt(currentQ.correct_answer); // Convert string to number
+          let correctAns = "";
+
+          if (!isNaN(correctAnsIndex) && Array.isArray(currentQ.options)) {
+            correctAns = currentQ.options[correctAnsIndex]; // Get actual option text
+          }
+          console.log("Correct Ans:", correctAns);
           correct =
             userAnswer.toString().trim().toLowerCase() ===
             correctAns.toString().trim().toLowerCase();
         } else if (qType === "numeric") {
           correctAns = JSON.parse(currentQ.correct_answer);
+          console.log("Correct Ans:", correctAns);
           const cleanedCorrect = parseFloat(
             currentQ.correct_answer.replace(/"/g, "")
           );
           const cleanedUser = parseFloat(
             userAnswer.toString().replace(/"/g, "")
           );
-          console.log(userAnswer, correctAns);
           correct = cleanedCorrect === cleanedUser;
-          console.log("Is Correct:", correct);
-
-          /*correctAns = parseFloat(currentQ.options[currentQ.correctAnswer]);
-          correct = parseFloat(userAnswer) === parseFloat(correctAns); // Convert both to numbers
-          console.log("MY numeric crct:", correctAns);*/
         } else if (qType === "text") {
+          correctAns = currentQ.correct_answer.replace(/"/g, "");
+          console.log("Correct Ans:", correctAns);
           correct =
             userAnswer.toString().trim().toLowerCase() ===
             correctAns.toString().trim().toLowerCase();
@@ -311,16 +295,29 @@ export default {
           if (!Array.isArray(userAnswer)) userAnswer = [userAnswer];
           if (!Array.isArray(correctAns)) correctAns = [];
 
-          const normalizedCorrect = correctAns
-            .map((v) => (v ?? "").toString().trim().toLowerCase())
+          // Convert correctAns indices to actual option texts
+          const correctTexts = correctAns
+            .map((index) => {
+              const idx = parseInt(index);
+              return currentQ.options?.[idx] ?? "";
+            })
+            .filter((v) => v !== "");
+          console.log("Correct Texts:", correctTexts);
+
+          const normalizedCorrect = correctTexts
+            .map((v) => v.toString().trim().toLowerCase())
             .sort();
+          console.log("NormalizedCorrect:", normalizedCorrect);
+
           const normalizedUser = userAnswer
-            .map((v) => (v ?? "").toString().trim().toLowerCase())
+            .map((v) => v.toString().trim().toLowerCase())
             .sort();
+          console.log("NormalizedUser:", normalizedUser);
 
           correct =
             JSON.stringify(normalizedCorrect) ===
             JSON.stringify(normalizedUser);
+          console.log("Iscorrect:", correct);
         }
       } catch (err) {
         console.error("Error comparing answers:", err);
