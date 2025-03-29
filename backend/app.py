@@ -367,6 +367,31 @@ def get_quiz_by_id(quiz_id):
         print("Error in get_quiz_by_id:", e)
         return jsonify({"message": "Server error"}), 500
 
+@app.route('/api/user/submit-result', methods=['POST'])
+@jwt_required()
+def submit_result():
+    try:
+        identity = json.loads(get_jwt_identity())
+        user = User.query.filter_by(id=identity["id"]).first()
+        if not user:
+            return jsonify({"message": "User not found"}), 404
+
+        data = request.get_json()
+        quiz_id = data.get("quiz_id")
+        score = data.get("score")
+
+        if quiz_id is None or score is None:
+            return jsonify({"message": "Missing quiz_id or score"}), 400
+
+        result = Result(user_id=user.id, quiz_id=quiz_id, score=score)
+        db.session.add(result)
+        db.session.commit()
+
+        return jsonify({"message": "✅ Result saved successfully!"}), 201
+
+    except Exception as e:
+        print("❌ Error in submit_result:", str(e))
+        return jsonify({"message": "Server error"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
