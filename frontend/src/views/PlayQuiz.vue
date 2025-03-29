@@ -96,15 +96,25 @@
         </button>
         <div>
           <button
-            v-if="currentQuestion < questions.length - 1"
-            class="btn btn-primary me-2"
-            @click="nextQuestion"
+            class="btn btn-success"
+            @click="checkAnswer"
+            :disabled="isAnswerEmpty(answers[currentQuestion]) || showFeedback"
           >
-            Next
+            Submit Answer
           </button>
-          <button v-else class="btn btn-success" @click="submitQuiz">
-            Submit Quiz
-          </button>
+          <div v-if="showFeedback" class="mt-3">
+            <div
+              :class="{
+                'alert alert-success': isCorrect,
+                'alert alert-danger': isCorrect === false,
+              }"
+            >
+              {{ isCorrect ? "Correct!" : "Wrong!" }}
+              <br />
+              <strong>Answer:</strong>
+              {{ questions[currentQuestion].correct_answer }}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -137,6 +147,9 @@ export default {
       answers: [],
       loading: false,
       error: null,
+      score: 0,
+      showFeedback: false,
+      isCorrect: null,
     };
   },
   async created() {
@@ -210,28 +223,30 @@ export default {
         this.currentQuestion++;
       }
     },
-    async submitQuiz() {
+    isAnswerEmpty(answer) {
+      if (Array.isArray(answer)) return answer.length === 0;
+      return !answer && answer !== 0; // handles "", null, undefined but not 0
+    },
+    async submitFinalResult() {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.post(
-          "http://localhost:5000/api/submit-quiz",
+        await axios.post(
+          "http://localhost:5000/api/user/submit-result",
           {
             quiz_id: this.quiz.id,
-            answers: this.questions.map((q, index) => ({
-              question_id: q.id,
-              selected_answer: this.answers[index],
-            })),
+            score: this.score,
           },
           {
             headers: { Authorization: `Bearer ${token}` },
           }
         );
-        console.log("🔑 Token being sent:", token);
-        // After submitting, navigate to results page or show result
-        alert(`Your score: ${response.data.score}`);
+        alert(
+          `Quiz Completed!\nYour Score: ${this.score}/${this.questions.length}`
+        );
         this.$router.push("/dashboard");
       } catch (err) {
-        this.error = "Error submitting quiz. Please try again.";
+        console.error("❌ Error submitting result:", err);
+        this.error = "Error submitting result. Try again.";
       }
     },
     confirmQuitQuiz() {
@@ -241,6 +256,74 @@ export default {
       if (confirmExit) {
         this.$router.push("/dashboard");
       }
+    },
+    checkAnswer() {
+      const currentQ = this.questions[this.currentQuestion];
+
+      let userAnswer = this.answers[this.currentQuestion];
+
+      // Ensure user has selected or entered an answer
+      if (this.isAnswerEmpty(userAnswer)) {
+        this.error = "Please select or enter an answer.";
+        return;
+      }
+
+      let correct = false;
+      const qType = currentQ.question_type.toLowerCase();
+      let correctAns = currentQ.correct_answer;
+
+      // Normalize correct answer if it's a stringified array (for MSQ)
+      if (typeof correctAns === "string" && correctAns.startsWith("[")) {
+        try {
+          correctAns = JSON.parse(correctAns);
+        } catch (e) {
+          console.error("Error parsing correct answer JSON:", e);
+          correctAns = [];
+        }
+      }
+
+      try {
+        if (["mcq", "text", "numeric"].includes(qType)) {
+          // Protect against undefined/null values
+          const userVal = (userAnswer ?? "").toString().trim().toLowerCase();
+          const correctVal = (correctAns ?? "").toString().trim().toLowerCase();
+          correct = userVal === correctVal;
+        } else if (qType === "msq") {
+          if (!Array.isArray(userAnswer)) userAnswer = [userAnswer]; // Ensure array
+          if (!Array.isArray(correctAns)) correctAns = [];
+
+          const normalizedCorrect = correctAns
+            .map((v) => (v ?? "").toString().trim().toLowerCase())
+            .sort();
+          const normalizedUser = userAnswer
+            .map((v) => (v ?? "").toString().trim().toLowerCase())
+            .sort();
+
+          correct =
+            JSON.stringify(normalizedCorrect) ===
+            JSON.stringify(normalizedUser);
+        }
+      } catch (err) {
+        console.error("Error comparing answers:", err);
+      }
+
+      this.isCorrect = correct;
+      if (correct) this.score++;
+
+      this.showFeedback = true;
+
+      console.log("User Answer:", userAnswer);
+      console.log("Correct Answer:", correctAns);
+      console.log("Is Correct:", correct);
+
+      setTimeout(() => {
+        this.showFeedback = false;
+        if (this.currentQuestion < this.questions.length - 1) {
+          this.currentQuestion++;
+        } else {
+          this.submitFinalResult();
+        }
+      }, 2000);
     },
   },
 };

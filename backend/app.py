@@ -351,6 +351,7 @@ def get_quiz_by_id(quiz_id):
                 "question_text": q.question_text,
                 "question_type": q.question_type,
                 "options": json.loads(q.options) if q.options else [],
+                "correct_answer": q.correct_answer
             })
 
         return jsonify({
