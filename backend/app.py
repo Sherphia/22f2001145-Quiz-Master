@@ -473,6 +473,62 @@ def generate_monthly_report():
         print("Error generating monthly report:", e)
         return jsonify({"message": "Server error"}), 500
     
+@app.route('/api/admin/monthly-pdf-report', methods=['GET'])
+@jwt_required()
+def generate_admin_monthly_pdf():
+    try:
+        identity = json.loads(get_jwt_identity())
+        admin = User.query.filter_by(id=identity["id"], role="admin").first()
+        if not admin:
+            return jsonify({"message": "Admins only!"}), 403
+
+        # Get current month range
+        today = datetime.now()
+        first_day = today.replace(day=1)
+        last_day = (first_day + timedelta(days=32)).replace(day=1)
+
+        results = Result.query.filter(Result.timestamp >= first_day, Result.timestamp < last_day).all()
+
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+
+        # Title
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, height - 50, f"Monthly Quiz Report ({today.strftime('%B %Y')})")
+
+        y = height - 100
+        p.setFont("Helvetica", 12)
+
+        if not results:
+            p.drawString(50, y, "No quiz attempts found this month.")
+        else:
+            for res in results:
+                user = User.query.get(res.user_id)
+                quiz = Quiz.query.get(res.quiz_id)
+                total_qs = Question.query.filter_by(quiz_id=res.quiz_id).count()
+                percentage = (res.score / total_qs * 100) if total_qs else 0
+                line = f"• {user.full_name if user else 'Unknown'} - {quiz.title if quiz else 'Unknown'}: {res.score}/{total_qs} ({round(percentage)}%)"
+                p.drawString(50, y, line)
+                y -= 20
+                if y < 50:
+                    p.showPage()
+                    y = height - 50
+
+        p.save()
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name=f'monthly_report_{today.strftime("%B_%Y")}.pdf',
+            mimetype='application/pdf'
+        )
+
+    except Exception as e:
+        print("❌ Error generating admin PDF report:", e)
+        return jsonify({"message": "Failed to generate PDF"}), 500
+
 @app.route('/api/user/pdf-report', methods=['GET'])
 @jwt_required()
 def generate_pdf_report():

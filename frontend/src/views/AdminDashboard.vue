@@ -3,7 +3,6 @@
     <div class="card-container">
       <h2 class="text-center mb-4 text-white">👑 Admin Dashboard</h2>
 
-      <!-- User Table -->
       <p class="text-white text-center fw-bold mb-4">
         List of Registered Users:
       </p>
@@ -33,26 +32,23 @@
           </tbody>
         </table>
       </div>
-      <div class="text-center mt-5">
+
+      <!-- Navigation Buttons -->
+      <div
+        class="text-center mt-4 d-flex flex-wrap justify-content-center gap-3"
+      >
         <button
           @click="$router.push('/admin-dashboard/add-quiz')"
           class="btn btn-light fw-bold"
         >
           ➕ Add Quiz
         </button>
-      </div>
-
-      <!-- Go to Add Question Page -->
-      <div class="text-center mt-4">
         <button
           @click="$router.push('/admin-dashboard/add-question')"
           class="btn btn-light fw-bold"
         >
           ➕ Add Question
         </button>
-      </div>
-
-      <div class="text-center mt-4">
         <button
           @click="$router.push('/admin-dashboard/manage-questions')"
           class="btn btn-light fw-bold"
@@ -60,12 +56,19 @@
           📋 Manage Questions
         </button>
       </div>
-      <!-- Download Monthly Report -->
-      <div class="text-center mt-4">
-        <button @click="downloadMonthlyReport" class="btn btn-success fw-bold">
-          📥 Download Monthly Report (CSV)
+
+      <!-- Download Buttons -->
+      <div
+        class="text-center mt-5 d-flex justify-content-center gap-3 flex-wrap"
+      >
+        <button @click="downloadCsv" class="btn btn-outline-light">
+          📥 Download CSV
+        </button>
+        <button @click="downloadPdf" class="btn btn-outline-light">
+          📝 Download PDF
         </button>
       </div>
+
       <!-- Logout -->
       <div class="text-center mt-4">
         <button @click="logout" class="btn btn-danger fw-bold">Logout</button>
@@ -113,40 +116,54 @@ export default {
       localStorage.removeItem("role");
       this.$router.push("/login");
     },
-    async downloadMonthlyReport() {
+    async downloadCsv() {
       try {
         const token = localStorage.getItem("token");
         const response = await fetch(
           "http://localhost:5000/api/admin/monthly-report",
           {
-            method: "GET",
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         );
-
-        if (!response.ok) {
-          const error = await response.json();
-          alert("Error: " + (error.message || "Unable to download report"));
-          return;
-        }
-
         const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = url;
+        link.href = URL.createObjectURL(blob);
         const date = new Date();
         const monthName = date.toLocaleString("default", { month: "long" });
         const year = date.getFullYear();
         const filename = `Monthly_Report_${monthName}_${year}.csv`;
         link.setAttribute("download", filename);
-        document.body.appendChild(link);
         link.click();
-        link.remove();
-      } catch (error) {
-        console.error("Download error:", error);
-        alert("Something went wrong while downloading the report.");
+      } catch (err) {
+        console.error("Failed to download CSV", err);
+        alert("Error downloading CSV");
+      }
+    },
+    async downloadPdf() {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          "http://localhost:5000/api/admin/monthly-pdf-report",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const blob = await response.blob();
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        const date = new Date();
+        const monthName = date.toLocaleString("default", { month: "long" });
+        const year = date.getFullYear();
+        const filename = `Monthly_Report_${monthName}_${year}.pdf`;
+        link.setAttribute("download", filename);
+        link.click();
+      } catch (err) {
+        console.error("Failed to download PDF", err);
+        alert("Error downloading PDF");
       }
     },
   },
