@@ -44,9 +44,24 @@
         </button>
       </div>
       <div class="text-center mt-4">
-        <router-link to="/history" class="btn btn-outline-info glow-button">
+        <h5 class="text-white mb-3">
+          🚀 Track Your Progress & Download Insights
+        </h5>
+        <router-link
+          to="/history"
+          class="btn btn-outline-info glow-button me-2"
+        >
           📊 View Quiz History
         </router-link>
+        <button @click="downloadPDF" class="btn btn-success glow-button me-2">
+          📄 Download PDF
+        </button>
+        <button
+          @click="downloadCSV"
+          class="btn btn-warning glow-button text-dark"
+        >
+          🧾 Download CSV
+        </button>
       </div>
     </div>
   </div>
@@ -101,6 +116,45 @@ export default {
     },
     playQuiz(quizId) {
       this.$router.push(`/play-quiz/${quizId}`);
+    },
+    downloadPDF() {
+      const token = localStorage.getItem("token");
+      axios
+        .get("http://localhost:5000/api/user/pdf-report", {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob", // Important for files
+        })
+        .then((res) => {
+          const url = window.URL.createObjectURL(new Blob([res.data]));
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", "quiz_report.pdf");
+          document.body.appendChild(link);
+          link.click();
+        })
+        .catch(() => {
+          alert("Failed to download PDF report.");
+        });
+    },
+
+    downloadCSV() {
+      const token = localStorage.getItem("token");
+      axios
+        .get("http://localhost:5000/api/user/csv-report", {
+          headers: { Authorization: `Bearer ${token}` },
+          responseType: "blob", // For CSV too
+        })
+        .then((res) => {
+          const url = window.URL.createObjectURL(new Blob([res.data]));
+          const link = document.createElement("a");
+          link.href = url;
+          link.setAttribute("download", "quiz_report.csv");
+          document.body.appendChild(link);
+          link.click();
+        })
+        .catch(() => {
+          alert("Failed to download CSV report.");
+        });
     },
   },
 };

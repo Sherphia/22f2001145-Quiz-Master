@@ -136,7 +136,11 @@ export default {
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.setAttribute("download", "monthly_report.csv");
+        const date = new Date();
+        const monthName = date.toLocaleString("default", { month: "long" });
+        const year = date.getFullYear();
+        const filename = `Monthly_Report_${monthName}_${year}.csv`;
+        link.setAttribute("download", filename);
         document.body.appendChild(link);
         link.click();
         link.remove();

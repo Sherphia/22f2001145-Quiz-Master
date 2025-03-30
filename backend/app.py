@@ -1,12 +1,15 @@
 import csv
-from io import StringIO
-from flask import Flask, json, jsonify, make_response, request
+from io import StringIO, BytesIO
+from flask import Flask, Response, json, jsonify, make_response,send_file, request
 from flask_cors import CORS
 from models.models import Question, Quiz, Result, db, User
 from routes.auth_routes import auth_bp
 from flask_jwt_extended import JWTManager,get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
@@ -416,7 +419,8 @@ def get_user_results():
                 "quiz_title": quiz.title if quiz else "Unknown Quiz",
                 "score": res.score,
                 "total": total_questions,
-                "percentage": round(percentage, 2)
+                "percentage": round(percentage, 2),
+                "date": res.timestamp.strftime('%Y-%m-%d %H:%M') if res.timestamp else "N/A"
             })
 
         return jsonify({"results": result_list}), 200
@@ -467,6 +471,94 @@ def generate_monthly_report():
 
     except Exception as e:
         print("Error generating monthly report:", e)
+        return jsonify({"message": "Server error"}), 500
+    
+@app.route('/api/user/pdf-report', methods=['GET'])
+@jwt_required()
+def generate_pdf_report():
+    try:
+        identity = json.loads(get_jwt_identity())
+        user = User.query.filter_by(id=identity["id"], role="user").first()
+        if not user:
+            return jsonify({"message": "Users only!"}), 403
+
+        results = Result.query.filter_by(user_id=user.id).all()
+
+        buffer = BytesIO()
+        p = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+
+        # Title
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(50, height - 50, f"Quiz Report for {user.full_name}")
+
+        y = height - 100
+        p.setFont("Helvetica", 12)
+        if not results:
+            p.drawString(50, y, "No quiz attempts found.")
+        else:
+            for res in results:
+                quiz = Quiz.query.get(res.quiz_id)
+                total_q = Question.query.filter_by(quiz_id=res.quiz_id).count()
+                percentage = (res.score / total_q * 100) if total_q > 0 else 0
+                text = f"• {quiz.title if quiz else 'Unknown'}: Score {res.score}/{total_q} ({round(percentage)}%)"
+                p.drawString(50, y, text)
+                y -= 20
+                if y < 50:
+                    p.showPage()
+                    y = height - 50
+
+        p.save()
+        buffer.seek(0)
+
+        return send_file(
+            buffer,
+            as_attachment=True,
+            download_name='quiz_report.pdf',
+            mimetype='application/pdf'
+        )
+
+    except Exception as e:
+        print("❌ Error generating PDF:", e)
+        return jsonify({"message": "Failed to generate PDF"}), 500
+
+@app.route('/api/user/csv-report', methods=['GET'])
+@jwt_required()
+def get_user_results_csv():
+    try:
+        identity = json.loads(get_jwt_identity())
+        user = User.query.filter_by(id=identity["id"], role="user").first()
+        if not user:
+            return jsonify({"message": "Users only!"}), 403
+
+        results = Result.query.filter_by(user_id=user.id).all()
+
+        # Create a CSV file in memory
+        output = StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Quiz Title", "Score", "Total Questions", "Percentage", "Date"])
+
+        for res in results:
+            quiz = Quiz.query.get(res.quiz_id)
+            total_questions = Question.query.filter_by(quiz_id=res.quiz_id).count()
+            percentage = (res.score / total_questions * 100) if total_questions > 0 else 0
+            writer.writerow([
+                quiz.title if quiz else "Unknown Quiz",
+                res.score,
+                total_questions,
+                round(percentage, 2),
+                res.timestamp.strftime('%Y-%m-%d %H:%M') if res.timestamp else "N/A"
+            ])
+
+        output.seek(0)
+        return Response(
+            output,
+            mimetype='text/csv',
+            headers={"Content-Disposition": "attachment; filename=quiz_report.csv"}
+        )
+
+    except Exception as e:
+        print("Error in get_user_results_csv:", e)
         return jsonify({"message": "Server error"}), 500
     
 if __name__ == '__main__':

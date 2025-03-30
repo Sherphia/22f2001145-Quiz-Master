@@ -17,6 +17,7 @@
         <table class="table table-hover table-bordered table-primary text-dark">
           <thead>
             <tr>
+              <th>Date</th>
               <th>Quiz Title</th>
               <th>Score</th>
               <th>Total Marks</th>
@@ -29,6 +30,7 @@
               :key="index"
               :class="getRowClass(result.percentage)"
             >
+              <td>{{ result.date }}</td>
               <td>{{ result.quiz_title }}</td>
               <td>{{ result.score }}</td>
               <td>{{ result.total }}</td>
