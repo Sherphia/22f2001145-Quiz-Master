@@ -38,6 +38,8 @@
             </tr>
           </tbody>
         </table>
+        <!-- Chart showing score trend -->
+        <UserPerformanceChart :results="results" />
       </div>
 
       <router-link to="/dashboard" class="btn btn-outline-light mt-4"
@@ -48,10 +50,14 @@
 </template>
 
 <script>
+import UserPerformanceChart from "./UserPerformanceChart.vue";
 import axios from "axios";
 
 export default {
   name: "UserHistory",
+  components: {
+    UserPerformanceChart,
+  },
   data() {
     return {
       results: [],
@@ -81,9 +87,9 @@ export default {
       }
     },
     getRowClass(percentage) {
-      if (percentage >= 80) return "table-success"; // green
-      else if (percentage >= 50) return "table-warning"; // orange
-      else return "table-danger"; // red
+      if (percentage >= 80) return "table-success";
+      else if (percentage >= 50) return "table-warning";
+      else return "table-danger";
     },
   },
 };
