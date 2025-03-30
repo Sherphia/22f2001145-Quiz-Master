@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
-
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 
@@ -24,6 +23,7 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
 app.config['CACHE_TYPE'] = 'SimpleCache'  # Use SimpleCache (in-memory cache)
 app.config['CACHE_DEFAULT_TIMEOUT'] = 300  # Cache expires after 300 seconds (5 mins)
+
 # Initialize extensions
 cache = Cache(app)  
 jwt = JWTManager(app)
@@ -624,6 +624,6 @@ def get_user_results_csv():
     except Exception as e:
         print("Error in get_user_results_csv:", e)
         return jsonify({"message": "Server error"}), 500
-    
+
 if __name__ == '__main__':
     app.run(debug=True)
