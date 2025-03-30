@@ -1,10 +1,12 @@
-from flask import Flask, json, jsonify, request
+import csv
+from io import StringIO
+from flask import Flask, json, jsonify, make_response, request
 from flask_cors import CORS
 from models.models import Question, Quiz, Result, db, User
 from routes.auth_routes import auth_bp
 from flask_jwt_extended import JWTManager,get_jwt_identity, jwt_required
 from werkzeug.security import generate_password_hash
-import datetime
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
@@ -13,7 +15,7 @@ CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
 app.config['JWT_SECRET_KEY'] = 'super-secret-key'  # Replace with a strong secret key!
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quiz_master.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_ACCESS_TOKEN_EXPIRES'] = datetime.timedelta(hours=24)
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
 # Initialize extensions
 jwt = JWTManager(app)
@@ -34,7 +36,7 @@ with app.app_context():
         email="admin@quizmaster.com",
         password=generate_password_hash("admin123"),
         qualification="Admin",
-        dob=datetime.date(1990, 1, 1),
+        dob=datetime(1990, 1, 1),
         role="admin"
         )
         db.session.add(admin_user)
@@ -423,5 +425,49 @@ def get_user_results():
         print("Error in get_user_results:", e)
         return jsonify({"message": "Server error"}), 500
 
+@app.route('/api/admin/monthly-report', methods=['GET'])
+@jwt_required()
+def generate_monthly_report():
+    try:
+        identity = json.loads(get_jwt_identity())
+        admin = User.query.filter_by(id=identity["id"], role="admin").first()
+        if not admin:
+            return jsonify({"message": "Admins only!"}), 403
+
+        # Get current month range
+        today = datetime.now()
+        first_day = today.replace(day=1)
+        last_day = (first_day + timedelta(days=32)).replace(day=1)
+
+        # Fetch results in this month
+        results = Result.query.filter(Result.timestamp >= first_day, Result.timestamp < last_day).all()
+
+        # Create CSV
+        si = StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['Username', 'Quiz Title', 'Score', 'Total Questions', 'Date'])
+
+        for res in results:
+            user = User.query.get(res.user_id)
+            quiz = Quiz.query.get(res.quiz_id)
+            total_qs = Question.query.filter_by(quiz_id=res.quiz_id).count()
+            cw.writerow([
+                user.full_name if user else "Unknown",
+                quiz.title if quiz else "Unknown Quiz",
+                res.score,
+                total_qs,
+                res.timestamp.strftime("%Y-%m-%d")
+            ])
+
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = f"attachment; filename=monthly_report_{today.strftime('%B_%Y')}.csv"
+        output.headers["Content-type"] = "text/csv"
+        print(f"📄 Monthly report generated for {today.strftime('%B %Y')} with {len(results)} entries.")
+        return output
+
+    except Exception as e:
+        print("Error generating monthly report:", e)
+        return jsonify({"message": "Server error"}), 500
+    
 if __name__ == '__main__':
     app.run(debug=True)

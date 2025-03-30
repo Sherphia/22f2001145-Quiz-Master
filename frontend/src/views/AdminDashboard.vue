@@ -60,6 +60,12 @@
           📋 Manage Questions
         </button>
       </div>
+      <!-- Download Monthly Report -->
+      <div class="text-center mt-4">
+        <button @click="downloadMonthlyReport" class="btn btn-success fw-bold">
+          📥 Download Monthly Report (CSV)
+        </button>
+      </div>
       <!-- Logout -->
       <div class="text-center mt-4">
         <button @click="logout" class="btn btn-danger fw-bold">Logout</button>
@@ -106,6 +112,38 @@ export default {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
       this.$router.push("/login");
+    },
+    async downloadMonthlyReport() {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          "http://localhost:5000/api/admin/monthly-report",
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const error = await response.json();
+          alert("Error: " + (error.message || "Unable to download report"));
+          return;
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "monthly_report.csv");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch (error) {
+        console.error("Download error:", error);
+        alert("Something went wrong while downloading the report.");
+      }
     },
   },
 };
