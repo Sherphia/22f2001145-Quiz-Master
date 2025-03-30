@@ -41,7 +41,7 @@ class Result(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     quiz_id = db.Column(db.Integer, db.ForeignKey('quizzes.id'), nullable=False)
     score = db.Column(db.Integer)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.now)
 
     user = db.relationship('User', backref=db.backref('results', lazy=True))
     quiz = db.relationship('Quiz', backref=db.backref('results', lazy=True))

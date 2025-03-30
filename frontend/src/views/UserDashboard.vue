@@ -8,7 +8,7 @@
       </p>
       <p class="text-center">📧 Email: {{ user.email }}</p>
       <p class="text-center">🎓 Qualification: {{ user.qualification }}</p>
-      <p class="text-center">🎂 Date of Birth: {{ user.dob }}</p>
+      <p class="text-center">🎂 Date of Birth: {{ formatDate(user.dob) }}</p>
 
       <div class="text-center mt-4">
         <button
@@ -113,6 +113,15 @@ export default {
     }
   },
   methods: {
+    formatDate(dateString) {
+      const options = {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      };
+      return new Date(dateString).toLocaleDateString("en-US", options);
+    },
     logout() {
       localStorage.removeItem("token");
       localStorage.removeItem("role");
