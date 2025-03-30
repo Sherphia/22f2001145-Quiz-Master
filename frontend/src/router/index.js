@@ -3,6 +3,7 @@ import SignupForm from "../views/SignupForm.vue";
 import LoginForm from "../views/LoginForm.vue";
 import UserDashboard from "../views/UserDashboard.vue";
 import AdminDashboard from "../views/AdminDashboard.vue";
+import UserHistory from "../views/UserHistory.vue";
 
 const routes = [
   {
@@ -41,6 +42,12 @@ const routes = [
     path: "/play-quiz/:quizId",
     name: "PlayQuiz",
     component: () => import("../views/PlayQuiz.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/history",
+    name: "UserHistory",
+    component: UserHistory,
     meta: { requiresAuth: true },
   },
 ];

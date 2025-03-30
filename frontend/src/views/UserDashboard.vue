@@ -43,6 +43,11 @@
           Play Quiz ▶️
         </button>
       </div>
+      <div class="text-center mt-4">
+        <router-link to="/history" class="btn btn-outline-info glow-button">
+          📊 View Quiz History
+        </router-link>
+      </div>
     </div>
   </div>
 </template>

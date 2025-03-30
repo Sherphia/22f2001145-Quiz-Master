@@ -394,5 +394,34 @@ def submit_result():
         print("❌ Error in submit_result:", str(e))
         return jsonify({"message": "Server error"}), 500
 
+@app.route('/api/user/results', methods=['GET'])
+@jwt_required()
+def get_user_results():
+    try:
+        identity = json.loads(get_jwt_identity())
+        user = User.query.filter_by(id=identity["id"], role="user").first()
+        if not user:
+            return jsonify({"message": "Users only!"}), 403
+
+        results = Result.query.filter_by(user_id=user.id).all()
+
+        result_list = []
+        for res in results:
+            quiz = Quiz.query.get(res.quiz_id)
+            total_questions = Question.query.filter_by(quiz_id=res.quiz_id).count()
+            percentage = (res.score / total_questions * 100) if total_questions > 0 else 0
+            result_list.append({
+                "quiz_title": quiz.title if quiz else "Unknown Quiz",
+                "score": res.score,
+                "total": total_questions,
+                "percentage": round(percentage, 2)
+            })
+
+        return jsonify({"results": result_list}), 200
+
+    except Exception as e:
+        print("Error in get_user_results:", e)
+        return jsonify({"message": "Server error"}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
