@@ -247,15 +247,13 @@ def create_quiz():
         data = request.get_json()
         title = data.get("title")
         description = data.get("description", "")
-        total_marks = data.get("total_marks")
 
-        if not title or total_marks is None:
-            return jsonify({"message": "Title and total marks are required"}), 400
+        if title is None:
+            return jsonify({"message": "Title is required"}), 400
 
         new_quiz = Quiz(
             title=title,
             description=description,
-            total_marks=total_marks
         )
 
         db.session.add(new_quiz)

@@ -22,16 +22,6 @@
         ></textarea>
       </div>
 
-      <div class="mb-3">
-        <label class="form-label text-white">Total Marks:</label>
-        <input
-          v-model.number="totalMarks"
-          type="number"
-          class="form-control"
-          placeholder="Enter total marks"
-        />
-      </div>
-
       <div class="text-center">
         <button @click="submitQuiz" class="btn btn-success fw-bold">
           🚀 Create Quiz
@@ -60,14 +50,13 @@ export default {
     return {
       title: "",
       description: "",
-      totalMarks: 0,
       message: "",
       messageType: "",
     };
   },
   methods: {
     async submitQuiz() {
-      if (!this.title.trim() || this.totalMarks <= 0) {
+      if (!this.title.trim()) {
         this.message = "⚠️ Please fill in all required fields!";
         this.messageType = "alert-danger";
         return;
@@ -80,7 +69,6 @@ export default {
           {
             title: this.title,
             description: this.description,
-            total_marks: this.totalMarks,
           },
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -91,7 +79,6 @@ export default {
         this.messageType = "alert-success";
         this.title = "";
         this.description = "";
-        this.totalMarks = 0;
       } catch (err) {
         console.error("Quiz creation failed:", err);
         this.message = "❌ Failed to create quiz!";
