@@ -1,6 +1,7 @@
 import csv
 from io import StringIO, BytesIO
 from flask import Flask, Response, json, jsonify, make_response,send_file, request
+from flask_caching import Cache
 from flask_cors import CORS
 from models.models import Question, Quiz, Result, db, User
 from routes.auth_routes import auth_bp
@@ -20,7 +21,11 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///quiz_master.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
+
+app.config['CACHE_TYPE'] = 'SimpleCache'  # Use SimpleCache (in-memory cache)
+app.config['CACHE_DEFAULT_TIMEOUT'] = 300  # Cache expires after 300 seconds (5 mins)
 # Initialize extensions
+cache = Cache(app)  
 jwt = JWTManager(app)
 db.init_app(app)
 
@@ -256,6 +261,8 @@ def create_quiz():
         db.session.add(new_quiz)
         db.session.commit()
 
+        cache.delete_memoized(get_quizzes)  
+
         return jsonify({"message": "Quiz created successfully!"}), 201
 
     except Exception as e:
@@ -264,6 +271,7 @@ def create_quiz():
     
 @app.route('/api/quizzes', methods=['GET'])
 @jwt_required()
+@cache.cached(timeout=60)
 def get_quizzes():
     try:
         identity = json.loads(get_jwt_identity())

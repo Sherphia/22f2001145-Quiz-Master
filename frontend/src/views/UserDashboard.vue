@@ -35,14 +35,18 @@
       <div
         v-for="quiz in filteredQuizzes"
         :key="quiz.id"
-        class="quiz-box p-3 my-3 rounded"
+        class="quiz-box p-3 my-3 rounded d-flex flex-column align-items-center justify-content-center"
       >
-        <h5 class="fw-bold text-glow">📘 {{ quiz.title }}</h5>
-        <p class="mb-2">📝 {{ quiz.description }}</p>
-        <button class="btn btn-primary glow-button" @click="playQuiz(quiz.id)">
+        <h5 class="fw-bold text-glow text-center">📘 {{ quiz.title }}</h5>
+        <p class="mb-2 text-center">📝 {{ quiz.description }}</p>
+        <button
+          class="btn btn-primary glow-button text-center"
+          @click="playQuiz(quiz.id)"
+        >
           Play Quiz ▶️
         </button>
       </div>
+
       <div class="text-center mt-4">
         <h5 class="text-white mb-3">
           🚀 Track Your Progress & Download Insights
